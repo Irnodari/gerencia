@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  # --- GATEWAYS REAIS (Containers Leves) ---
+  gateway-alpha:
+    image: alpine
+    container_name: gateway-alpha
+    command: sh -c "while true; do sleep 3600; done" # Mantém rodando
+    networks:
+      rede-gerencia:
+        ipv4_address: 172.25.0.101 # IP Fixo Alpha
+
+  gateway-beta:
+    image: alpine
+    container_name: gateway-beta
+    command: sh -c "while true; do sleep 3600; done"
+    networks:
+      rede-gerencia:
+        ipv4_address: 172.25.0.102 # IP Fixo Beta
+
+  # --- SWITCH (Dispositivo SNMP) ---
+  device-node:
+    build: ./device-node
+    container_name: device-node
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "1161:161/udp"
+    networks:
+      - rede-gerencia
+
+  # --- BASE DE CONHECIMENTO ---
+  jena-fuseki:
+    image: stain/jena-fuseki:latest
+    container_name: jena-fuseki
+    ports:
+      - "3030:3030"
+    environment:
+      - ADMIN_PASSWORD=admin
+    entrypoint: ["/jena-fuseki/fuseki-server"]
+    command: ["--mem", "--update", "--tdb2", "/rede"]
+    networks:
+      - rede-gerencia
+
+  # --- GERENTE (Sua Aplicação) ---
+  python-app:
+    build: ./python-app
+    container_name: gerencia-python-app-1
+    depends_on:
+      - jena-fuseki
+      - device-node
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      # A MÁGICA: Conecta sua pasta local 'public_html' à pasta interna '/app/public_html'
+      - ./public_html:/app/public_html
+    networks:
+      - rede-gerencia
+
+networks:
+  rede-gerencia:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16
