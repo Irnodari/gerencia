@@ -131,4 +131,19 @@ Para testar a resiliência do sistema:
     ```
 2.  O sistema continuará operando no Beta (para evitar instabilidade), mas detectará que o Alpha está disponível para futuras operações.
 
+### Cenário D: Desativação de interfaces
+
+1.  Pare ambos os Gateways:
+    ```bash
+    docker stop gateway-alpha gateway-beta
+    ```
+2.  O sistema irá desativar as interfaces de rede e esperar o retorno de alguma das interfaces para seguir seu funcionamento normal.
+
+3.  Reative um dos Gateways:
+    ```bash
+    docker start gateway-alpha
+    ```
+
+4.  O sistema irá reativar as interfaces e mudar o roteamento para usar o Gateway ativo
+
 ```
